@@ -9,8 +9,11 @@ import {
     Loader2,
     X,
     ChevronDown,
-    Wand2
+    Wand2,
+    Code,
+    Check
 } from 'lucide-react';
+import { createPresentationPrompt } from '../utils/contentGenerator';
 
 export function Sidebar({
     slides,
@@ -21,23 +24,41 @@ export function Sidebar({
     onDuplicateSlide,
     onReorderSlides,
     onGeneratePresentation,
+    onImportPresentation,
     isGenerating,
 }) {
     const [showTopicInput, setShowTopicInput] = useState(false);
     const [topic, setTopic] = useState('');
     const [description, setDescription] = useState('');
     const [instructions, setInstructions] = useState('');
+    const [slideCount, setSlideCount] = useState(8);
+    
+    // Manual Mode State
+    const [isManualMode, setIsManualMode] = useState(false);
+    const [manualResponse, setManualResponse] = useState('');
+    const [copied, setCopied] = useState(false);
 
     const handleGenerate = useCallback(async () => {
         if (!topic.trim()) return;
-        // Pass description and instructions as combined context
-        const context = [description, instructions].filter(s => s.trim());
-        await onGeneratePresentation(topic, context);
+        
+        if (isManualMode) {
+             if (!manualResponse.trim()) return;
+             await onImportPresentation(manualResponse, topic);
+        } else {
+             // Pass description and instructions as combined context
+             const context = [description, instructions].filter(s => s.trim());
+             await onGeneratePresentation(topic, context, slideCount);
+        }
+        
+        // Reset state
         setShowTopicInput(false);
         setTopic('');
         setDescription('');
         setInstructions('');
-    }, [topic, description, instructions, onGeneratePresentation]);
+        setManualResponse('');
+        setSlideCount(8);
+        setIsManualMode(false);
+    }, [topic, description, instructions, manualResponse, slideCount, isManualMode, onGeneratePresentation, onImportPresentation]);
 
     const handleReorder = useCallback((newOrder) => {
         // Find the indices and reorder
@@ -53,6 +74,22 @@ export function Sidebar({
             });
         }
     }, [slides, onReorderSlides]);
+
+    const getGeneratedPrompt = () => {
+        const context = [description, instructions].filter(s => s.trim());
+        const { systemPrompt, userPrompt } = createPresentationPrompt(topic, context, slideCount);
+        return `${systemPrompt}\n\n${userPrompt}`;
+    };
+
+    const copyToClipboard = async () => {
+        try {
+            await navigator.clipboard.writeText(getGeneratedPrompt());
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy', err);
+        }
+    };
 
     return (
         <aside className="sidebar">
@@ -101,13 +138,21 @@ export function Sidebar({
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div className="topic-modal-header">
-                                <h3>Generate Presentation</h3>
-                                <button
-                                    className="btn btn-ghost btn-icon"
-                                    onClick={() => setShowTopicInput(false)}
-                                >
-                                    <X size={18} />
-                                </button>
+                                <h3>{isManualMode ? 'Manual Import' : 'Generate Presentation'}</h3>
+                                <div className="header-actions">
+                                    <button 
+                                        className="btn btn-ghost btn-sm"
+                                        onClick={() => setIsManualMode(!isManualMode)}
+                                    >
+                                        {isManualMode ? 'Switch to Auto' : 'No API Key?'}
+                                    </button>
+                                    <button
+                                        className="btn btn-ghost btn-icon"
+                                        onClick={() => setShowTopicInput(false)}
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="topic-modal-content">
@@ -123,33 +168,94 @@ export function Sidebar({
                                     />
                                 </div>
 
-                                <div className="form-group">
-                                    <label className="form-label">
-                                        Description
-                                        <span className="form-label-hint">(optional)</span>
-                                    </label>
-                                    <textarea
-                                        className="input textarea"
-                                        placeholder="Describe what you want to cover in the presentation..."
-                                        value={description}
-                                        onChange={(e) => setDescription(e.target.value)}
-                                        rows={3}
-                                    />
-                                </div>
+                                {!isManualMode && (
+                                    <>
+                                        <div className="form-group">
+                                            <label className="form-label">
+                                                Description
+                                                <span className="form-label-hint">(optional)</span>
+                                            </label>
+                                            <textarea
+                                                className="input textarea"
+                                                placeholder="Describe what you want to cover in the presentation..."
+                                                value={description}
+                                                onChange={(e) => setDescription(e.target.value)}
+                                                rows={3}
+                                            />
+                                        </div>
 
-                                <div className="form-group">
-                                    <label className="form-label">
-                                        Special Instructions
-                                        <span className="form-label-hint">(optional)</span>
-                                    </label>
-                                    <textarea
-                                        className="input textarea"
-                                        placeholder="Any specific style, colors, or requirements..."
-                                        value={instructions}
-                                        onChange={(e) => setInstructions(e.target.value)}
-                                        rows={2}
-                                    />
-                                </div>
+                                        <div className="form-group">
+                                            <label className="form-label">
+                                                Number of Slides
+                                                <span className="form-label-hint">(1-50)</span>
+                                            </label>
+                                            <input
+                                                type="number"
+                                                className="input"
+                                                min="1"
+                                                max="50"
+                                                value={slideCount}
+                                                onChange={(e) => setSlideCount(Math.min(50, Math.max(1, parseInt(e.target.value) || 8)))}
+                                            />
+                                        </div>
+
+                                        <div className="form-group">
+                                            <label className="form-label">
+                                                Special Instructions
+                                                <span className="form-label-hint">(optional)</span>
+                                            </label>
+                                            <textarea
+                                                className="input textarea"
+                                                placeholder="Any specific style, colors, or requirements..."
+                                                value={instructions}
+                                                onChange={(e) => setInstructions(e.target.value)}
+                                                rows={2}
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
+                                {isManualMode && topic && (
+                                    <div className="manual-mode-section">
+                                        <div className="form-group">
+                                            <label className="form-label">
+                                                1. Copy Prompt ({slideCount} slides)
+                                                <button 
+                                                    className="btn btn-xs btn-ghost ml-2"
+                                                    onClick={copyToClipboard}
+                                                >
+                                                    {copied ? <Check size={12} /> : <Copy size={12} />}
+                                                    {copied ? ' Copied!' : ' Copy'}
+                                                </button>
+                                            </label>
+                                            <div className="form-group">
+                                                <input
+                                                    type="number"
+                                                    className="input input-sm mb-2"
+                                                    style={{ maxWidth: '100px' }}
+                                                    min="1"
+                                                    max="50"
+                                                    value={slideCount}
+                                                    onChange={(e) => setSlideCount(Math.min(50, Math.max(1, parseInt(e.target.value) || 8)))}
+                                                />
+                                            </div>
+                                            <div className="prompt-preview">
+                                                {getGeneratedPrompt()}
+                                            </div>
+                                        </div>
+
+                                        <div className="form-group">
+                                            <label className="form-label">2. Paste AI Response (JSON)</label>
+                                            <textarea
+                                                className="input textarea code-input"
+                                                placeholder='Paste the JSON response here (e.g., { "title": "...", "slides": [...] })'
+                                                value={manualResponse}
+                                                onChange={(e) => setManualResponse(e.target.value)}
+                                                rows={6}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="topic-modal-footer">
@@ -162,17 +268,17 @@ export function Sidebar({
                                 <button
                                     className="btn btn-primary"
                                     onClick={handleGenerate}
-                                    disabled={!topic.trim() || isGenerating}
+                                    disabled={!topic.trim() || isGenerating || (isManualMode && !manualResponse.trim())}
                                 >
                                     {isGenerating ? (
                                         <>
                                             <Loader2 size={16} className="animate-spin" />
-                                            Generating...
+                                            Processing...
                                         </>
                                     ) : (
                                         <>
-                                            <Wand2 size={16} />
-                                            Generate
+                                            {isManualMode ? <Code size={16} /> : <Wand2 size={16} />}
+                                            {isManualMode ? 'Import Slides' : 'Generate'}
                                         </>
                                     )}
                                 </button>
@@ -421,7 +527,10 @@ export function Sidebar({
 
         .topic-modal {
           width: 100%;
-          max-width: 500px;
+          max-width: 600px;
+          max-height: 90vh;
+          display: flex;
+          flex-direction: column;
           background: var(--bg-elevated);
           border: 1px solid var(--border-default);
           border-radius: var(--radius-xl);
@@ -441,12 +550,20 @@ export function Sidebar({
           font-size: var(--text-lg);
           font-weight: 600;
         }
+        
+        .header-actions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
 
         .topic-modal-content {
           padding: 24px;
           display: flex;
           flex-direction: column;
           gap: 20px;
+          overflow-y: auto;
+          flex: 1;
         }
 
         .form-group {
@@ -459,6 +576,8 @@ export function Sidebar({
           font-size: var(--text-sm);
           font-weight: 500;
           color: var(--text-secondary);
+          display: flex;
+          align-items: center;
         }
 
         .form-label-hint {
@@ -473,6 +592,32 @@ export function Sidebar({
           font-family: inherit;
           line-height: 1.5;
         }
+        
+        .manual-mode-section {
+            border-top: 1px solid var(--border-subtle);
+            padding-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .prompt-preview {
+            background: var(--bg-tertiary);
+            padding: 12px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-subtle);
+            font-family: monospace;
+            font-size: var(--text-xs);
+            white-space: pre-wrap;
+            max-height: 150px;
+            overflow-y: auto;
+            color: var(--text-secondary);
+        }
+        
+        .code-input {
+            font-family: monospace;
+            font-size: var(--text-xs);
+        }
 
         .topic-modal-footer {
           display: flex;
@@ -482,6 +627,8 @@ export function Sidebar({
           background: var(--bg-tertiary);
           border-top: 1px solid var(--border-subtle);
         }
+        
+        .ml-2 { margin-left: 8px; }
       `}</style>
         </aside>
     );

@@ -14,7 +14,9 @@ import {
     Check,
     X,
     Loader2,
-    MoreHorizontal
+    MoreHorizontal,
+    Upload,
+    Save
 } from 'lucide-react';
 
 import { exportToHTML } from '../utils/exportHTML';
@@ -28,7 +30,9 @@ export function Toolbar({
     slides,
     onStartPresentation,
     theme,
-    onToggleTheme
+    onToggleTheme,
+    onSaveProject,
+    onLoadProject
 }) {
     const [isExportOpen, setIsExportOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -39,6 +43,7 @@ export function Toolbar({
 
     const exportRef = useRef(null);
     const settingsRef = useRef(null);
+    const fileInputRef = useRef(null);
 
     // Close dropdowns on outside click
     useEffect(() => {
@@ -100,6 +105,15 @@ export function Toolbar({
         }
     }, [apiKey]);
 
+    const handleFileChange = (event) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            onLoadProject(file);
+        }
+        // Reset input so same file can be selected again
+        event.target.value = '';
+    };
+
     return (
         <header className="toolbar">
             {/* Logo & Title */}
@@ -126,6 +140,15 @@ export function Toolbar({
 
             {/* Right Actions */}
             <div className="toolbar-right">
+                {/* Hidden File Input */}
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    style={{ display: 'none' }}
+                    accept=".json"
+                />
+
                 {/* API Key Status */}
                 {apiKeyStatus === 'configured' && (
                     <div className="api-status configured" title="AI Connected">
@@ -133,6 +156,15 @@ export function Toolbar({
                         <span>AI Ready</span>
                     </div>
                 )}
+
+                {/* Load Project */}
+                <button
+                    className="btn btn-ghost btn-icon"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Load Project (JSON)"
+                >
+                    <Upload size={18} />
+                </button>
 
                 {/* Theme Toggle */}
                 <button
@@ -226,6 +258,14 @@ export function Toolbar({
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -8 }}
                             >
+                                <button className="dropdown-item" onClick={onSaveProject}>
+                                    <Save size={16} />
+                                    <div className="dropdown-item-content">
+                                        <span className="dropdown-item-title">Save Project</span>
+                                        <span className="dropdown-item-desc">Backup as JSON</span>
+                                    </div>
+                                </button>
+                                <div className="dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
                                 <button className="dropdown-item" onClick={handleExportHTML}>
                                     <FileText size={16} />
                                     <div className="dropdown-item-content">

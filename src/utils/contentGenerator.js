@@ -54,7 +54,7 @@ Create beautiful, professional slides with:
 Generate 12-16 visually impressive slides. Be CREATIVE!`;
 
 
-export const generatePresentation = async (topic, context = []) => {
+export const generatePresentation = async (topic, context = [], slideCount = 10) => {
     if (!genAI) {
         throw new Error('AI not configured. Please set your Google AI Studio API key.');
     }
@@ -62,29 +62,58 @@ export const generatePresentation = async (topic, context = []) => {
     const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 
     // Build context from description and instructions
-    const contextText = context.filter(s => s.trim()).join('\n\n');
+    const { systemPrompt, userPrompt } = createPresentationPrompt(topic, context, slideCount);
+
+    try {
+        const result = await model.generateContent([
+            { text: systemPrompt },
+            { text: userPrompt }
+        ]);
+
+        const response = await result.response;
+        const text = response.text();
+
+        return parsePresentationResponse(text, topic);
+    } catch (error) {
+        console.error('AI Generation Error:', error);
+        if (error.message.includes('API key')) {
+            throw new Error('Invalid API key. Please check your Google AI Studio API key.');
+        }
+        throw new Error(`Failed to generate presentation: ${error.message}`);
+    }
+};
+
+export const createPresentationPrompt = (topic, context = [], slideCount = 10) => {
+    const contextText = Array.isArray(context) ? context.filter(s => s.trim()).join('\n\n') : context;
     const userPrompt = `
 Topic: ${topic}
 ${contextText ? `\nAdditional Context:\n${contextText}` : ''}
 
 Create a stunning, visually rich presentation on this topic.`;
 
+    let systemPrompt = SLIDE_GENERATION_PROMPT;
+    if (slideCount) {
+        systemPrompt = systemPrompt.replace(
+            'Generate 12-16 visually impressive slides',
+            `Generate exactly ${slideCount} visually impressive slides`
+        );
+    }
+
+    return {
+        systemPrompt,
+        userPrompt
+    };
+};
+
+export const parsePresentationResponse = (text, defaultTitle = 'Untitled Presentation') => {
     try {
-        const result = await model.generateContent([
-            { text: SLIDE_GENERATION_PROMPT },
-            { text: userPrompt }
-        ]);
-
-        const response = await result.response;
-        let text = response.text();
-
         // Clean up the response - remove markdown code blocks if present
-        text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        const cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
-        const data = JSON.parse(text);
+        const data = JSON.parse(cleanText);
 
         if (!data.slides || !Array.isArray(data.slides)) {
-            throw new Error('Invalid response format from AI');
+            throw new Error('Invalid response format: missing slides array');
         }
 
         // Transform to our slide format
@@ -97,15 +126,12 @@ Create a stunning, visually rich presentation on this topic.`;
         }));
 
         return {
-            title: data.title || topic,
+            title: data.title || defaultTitle,
             slides,
         };
     } catch (error) {
-        console.error('AI Generation Error:', error);
-        if (error.message.includes('API key')) {
-            throw new Error('Invalid API key. Please check your Google AI Studio API key.');
-        }
-        throw new Error(`Failed to generate presentation: ${error.message}`);
+        console.error('Response Parsing Error:', error);
+        throw new Error('Failed to parse AI response. Please ensure it is valid JSON.');
     }
 };
 
@@ -168,5 +194,7 @@ export default {
     getStoredApiKey,
     isAIConfigured,
     generatePresentation,
+    createPresentationPrompt,
+    parsePresentationResponse,
     regenerateSlide,
 };

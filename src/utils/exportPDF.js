@@ -13,9 +13,9 @@ export const exportToPDF = async (presentationTitle, slides, onProgress) => {
     top: 0;
     width: 1280px;
     height: 720px;
-    background: linear-gradient(135deg, #1a1a24 0%, #0f0f14 100%);
+    background: #ffffff;
     font-family: 'Inter', sans-serif;
-    color: #ffffff;
+    color: #333333;
     padding: 60px;
     box-sizing: border-box;
   `;
@@ -44,63 +44,65 @@ export const exportToPDF = async (presentationTitle, slides, onProgress) => {
             font-size: 3rem;
             font-weight: 700;
             margin-bottom: 1.5rem;
-            color: #818cf8;
+            color: #333333;
           }
           h2 {
             font-size: 2rem;
             font-weight: 600;
             margin-bottom: 1rem;
-            color: #ffffff;
+            color: #333333;
           }
           h3 {
             font-size: 1.5rem;
             font-weight: 600;
             margin-bottom: 0.75rem;
-            color: #e0e0e0;
+            color: #444444;
           }
           p {
             font-size: 1.25rem;
             line-height: 1.6;
             margin-bottom: 0.75rem;
-            color: #a8a8b3;
+            color: #555555;
           }
           ul, ol {
             font-size: 1.25rem;
             line-height: 1.8;
             margin-left: 2rem;
             margin-bottom: 1rem;
-            color: #a8a8b3;
+            color: #555555;
           }
           li {
             margin-bottom: 0.5rem;
           }
           blockquote {
-            border-left: 4px solid #6366f1;
+            border-left: 4px solid #3b82f6;
             padding-left: 1rem;
             margin: 1rem 0;
             font-style: italic;
-            color: #8080a0;
+            color: #666666;
           }
           code {
             font-family: monospace;
-            background: rgba(99, 102, 241, 0.2);
+            background: rgba(59, 130, 246, 0.1);
             padding: 0.2rem 0.4rem;
             border-radius: 4px;
+            color: #333333;
           }
           pre {
-            background: #1a1a24;
+            background: #f5f5f5;
             padding: 1rem;
             border-radius: 8px;
             overflow-x: auto;
           }
           strong {
-            color: #ffffff;
+            color: #333333;
+            font-weight: 600;
           }
         </style>
         <div class="slide-content">
           ${slide.content}
         </div>
-        <div style="position: absolute; bottom: 30px; right: 40px; font-size: 14px; color: #6b6b78;">
+        <div style="position: absolute; bottom: 30px; right: 40px; font-size: 14px; color: #999999;">
           ${i + 1} / ${slides.length}
         </div>
       `;

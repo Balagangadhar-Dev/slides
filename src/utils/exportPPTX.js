@@ -29,13 +29,13 @@ const htmlToTextRuns = (html) => {
 
         switch (tag) {
             case 'h1':
-                newOptions = { ...newOptions, fontSize: 44, bold: true, color: '6366f1' };
+                newOptions = { ...newOptions, fontSize: 44, bold: true, color: '333333' };
                 break;
             case 'h2':
-                newOptions = { ...newOptions, fontSize: 32, bold: true, color: 'ffffff' };
+                newOptions = { ...newOptions, fontSize: 32, bold: true, color: '333333' };
                 break;
             case 'h3':
-                newOptions = { ...newOptions, fontSize: 24, bold: true, color: 'e0e0e0' };
+                newOptions = { ...newOptions, fontSize: 24, bold: true, color: '444444' };
                 break;
             case 'strong':
             case 'b':
@@ -46,7 +46,7 @@ const htmlToTextRuns = (html) => {
                 newOptions = { ...newOptions, italic: true };
                 break;
             case 'code':
-                newOptions = { ...newOptions, fontFace: 'Courier New', color: '818cf8' };
+                newOptions = { ...newOptions, fontFace: 'Courier New', color: '3b82f6' };
                 break;
             case 'u':
                 newOptions = { ...newOptions, underline: true };
@@ -133,18 +133,8 @@ export const exportToPPTX = async (presentationTitle, slides, onProgress) => {
     // Define master slide
     pptx.defineSlideMaster({
         title: 'MAIN',
-        background: { color: '0f0f14' },
+        background: { color: 'FFFFFF' },
         objects: [
-            // Gradient overlay effect (simulated with shape)
-            {
-                rect: {
-                    x: 0,
-                    y: 0,
-                    w: '100%',
-                    h: '100%',
-                    fill: { type: 'solid', color: '1a1a24' },
-                }
-            },
             // Slide number
             {
                 text: {
@@ -154,7 +144,7 @@ export const exportToPPTX = async (presentationTitle, slides, onProgress) => {
                         y: 5.2,
                         w: 1,
                         fontSize: 10,
-                        color: '6b6b78',
+                        color: '999999',
                     }
                 }
             }
@@ -163,7 +153,7 @@ export const exportToPPTX = async (presentationTitle, slides, onProgress) => {
             x: 9.2,
             y: 5.2,
             fontSize: 10,
-            color: '6b6b78',
+            color: '999999',
         }
     });
 
@@ -176,9 +166,6 @@ export const exportToPPTX = async (presentationTitle, slides, onProgress) => {
         }
 
         const slide = pptx.addSlide({ masterName: 'MAIN' });
-
-        // Set background
-        slide.background = { color: '1a1a24' };
 
         // Parse content
         const content = parseSlideContent(slideData.content);
@@ -194,7 +181,7 @@ export const exportToPPTX = async (presentationTitle, slides, onProgress) => {
                 h: 1,
                 fontSize: 40,
                 bold: true,
-                color: '6366f1',
+                color: '333333',
                 fontFace: 'Arial',
             });
             yPos += 1.2;
@@ -209,7 +196,7 @@ export const exportToPPTX = async (presentationTitle, slides, onProgress) => {
                 h: 0.6,
                 fontSize: 28,
                 bold: true,
-                color: 'ffffff',
+                color: '555555',
                 fontFace: 'Arial',
             });
             yPos += 0.8;
@@ -224,7 +211,7 @@ export const exportToPPTX = async (presentationTitle, slides, onProgress) => {
                 w: 9,
                 h: 1.5,
                 fontSize: 18,
-                color: 'a8a8b3',
+                color: '666666',
                 fontFace: 'Arial',
                 valign: 'top',
             });
@@ -237,8 +224,8 @@ export const exportToPPTX = async (presentationTitle, slides, onProgress) => {
                 text: bullet,
                 options: {
                     fontSize: 18,
-                    color: 'a8a8b3',
-                    bullet: { type: 'bullet', color: '6366f1' },
+                    color: '666666',
+                    bullet: { type: 'bullet', color: '3b82f6' },
                     paraSpaceAfter: 8,
                 }
             }));
@@ -263,7 +250,7 @@ export const exportToPPTX = async (presentationTitle, slides, onProgress) => {
                         fontSize: run.options.fontSize || 18,
                         bold: run.options.bold || false,
                         italic: run.options.italic || false,
-                        color: run.options.color || 'a8a8b3',
+                        color: run.options.color || '666666',
                         fontFace: run.options.fontFace || 'Arial',
                     }
                 })), {
@@ -283,7 +270,7 @@ export const exportToPPTX = async (presentationTitle, slides, onProgress) => {
             w: 1.2,
             h: 0.3,
             fontSize: 10,
-            color: '6b6b78',
+            color: '999999',
             align: 'right',
         });
     }

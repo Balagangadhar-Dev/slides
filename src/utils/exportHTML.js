@@ -38,6 +38,8 @@ export const exportToHTML = (presentationTitle, slides) => {
       height: 100vh;
       padding: 60px 80px;
       background: #ffffff;
+      position: relative;
+      z-index: 1;
     }
     
     .slide.active {
@@ -140,55 +142,61 @@ export const exportToHTML = (presentationTitle, slides) => {
       color: #555555;
     }
     
-    /* Navigation */
-    .nav-controls {
+    /* Navigation Zones */
+    .click-zone {
       position: fixed;
-      bottom: 30px;
+      top: 0;
+      bottom: 0;
+      width: 15vw;
+      z-index: 100;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    
+    .click-zone:hover {
+      background: rgba(0, 0, 0, 0.02);
+    }
+    
+    .click-zone.left {
+      left: 0;
+    }
+    
+    .click-zone.right {
+      right: 0;
+    }
+
+    /* Counter Pill */
+    .slide-counter {
+      position: fixed;
+      bottom: 24px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
       align-items: center;
-      gap: 20px;
-      padding: 12px 24px;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      border-radius: 40px;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-      z-index: 100;
-    }
-    
-    .nav-btn {
-      width: 40px;
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #3b82f6;
-      border: none;
-      border-radius: 50%;
-      color: white;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-size: 18px;
-    }
-    
-    .nav-btn:hover {
-      background: #2563eb;
-      transform: scale(1.05);
-    }
-    
-    .nav-btn:disabled {
-      opacity: 0.3;
-      cursor: not-allowed;
-      transform: none;
-    }
-    
-    .slide-counter {
+      gap: 4px;
       font-size: 14px;
-      color: #666666;
-      min-width: 60px;
-      text-align: center;
+      font-weight: 500;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      border-radius: 20px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      z-index: 100;
+      color: #666;
+      pointer-events: none;
+    }
+    
+    .current-index {
+      color: #3b82f6;
+      font-weight: 600;
+    }
+    
+    .separator {
+      color: #ccc;
     }
     
     /* Progress bar */
@@ -196,19 +204,10 @@ export const exportToHTML = (presentationTitle, slides) => {
       position: fixed;
       top: 0;
       left: 0;
-      height: 3px;
+      height: 4px;
       background: linear-gradient(90deg, #3b82f6, #8b5cf6);
       transition: width 0.3s ease;
-    }
-    
-    /* Help tooltip */
-    .help-text {
-      position: fixed;
-      bottom: 100px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 12px;
-      color: #999999;
+      z-index: 101;
     }
   </style>
 </head>
@@ -217,13 +216,16 @@ export const exportToHTML = (presentationTitle, slides) => {
   
   ${slidesHTML}
   
-  <div class="nav-controls">
-    <button class="nav-btn" id="prevBtn" onclick="prevSlide()">←</button>
-    <span class="slide-counter" id="counter">1 / ${slides.length}</span>
-    <button class="nav-btn" id="nextBtn" onclick="nextSlide()">→</button>
-  </div>
+  <!-- Navigation Zones -->
+  <div class="click-zone left" onclick="prevSlide()" title="Previous (Left Arrow)"></div>
+  <div class="click-zone right" onclick="nextSlide()" title="Next (Right Arrow / Space)"></div>
   
-  <div class="help-text">Use arrow keys ← → to navigate • ESC for overview</div>
+  <!-- Counter -->
+  <div class="slide-counter">
+    <span class="current-index" id="current-index">1</span>
+    <span class="separator">/</span>
+    <span class="total-count">${slides.length}</span>
+  </div>
   
   <script>
     let currentSlide = 0;
@@ -233,10 +235,8 @@ export const exportToHTML = (presentationTitle, slides) => {
       document.querySelectorAll('.slide').forEach((slide, i) => {
         slide.classList.toggle('active', i === index);
       });
-      document.getElementById('counter').textContent = (index + 1) + ' / ' + totalSlides;
+      document.getElementById('current-index').textContent = (index + 1);
       document.getElementById('progress').style.width = ((index + 1) / totalSlides * 100) + '%';
-      document.getElementById('prevBtn').disabled = index === 0;
-      document.getElementById('nextBtn').disabled = index === totalSlides - 1;
     }
     
     function nextSlide() {
@@ -254,7 +254,7 @@ export const exportToHTML = (presentationTitle, slides) => {
     }
     
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowRight' || e.key === ' ') {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
         nextSlide();
       } else if (e.key === 'ArrowLeft') {

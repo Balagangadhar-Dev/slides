@@ -3,7 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'react-hot-toast';
 
 import { usePresentation } from './hooks/usePresentation';
-import { generatePresentation, isAIConfigured } from './utils/contentGenerator';
+import { generatePresentation, isAIConfigured, parsePresentationResponse } from './utils/contentGenerator';
 
 import { Toolbar } from './components/Toolbar';
 import { Sidebar } from './components/Sidebar';
@@ -38,17 +38,17 @@ function App() {
     toggleTheme,
   } = usePresentation();
 
-  const handleGeneratePresentation = useCallback(async (topic, subtopics) => {
+  const handleGeneratePresentation = useCallback(async (topic, subtopics, slideCount) => {
     if (!isAIConfigured()) {
       toast.error('Please configure your Google AI Studio API key in Settings first.');
       return;
     }
 
     setIsGenerating(true);
-    const toastId = toast.loading('Generating presentation...');
+    const toastId = toast.loading(`Generating ${slideCount || 10} slides...`);
 
     try {
-      const result = await generatePresentation(topic, subtopics);
+      const result = await generatePresentation(topic, subtopics, slideCount);
 
       setPresentationTitle(result.title);
       loadSlides(result.slides);
@@ -61,6 +61,64 @@ function App() {
       setIsGenerating(false);
     }
   }, [setIsGenerating, setPresentationTitle, loadSlides]);
+
+  const handleImportPresentation = useCallback(async (jsonText, topic) => {
+    setIsGenerating(true);
+    const toastId = toast.loading('Importing slides...');
+
+    try {
+      const result = parsePresentationResponse(jsonText, topic);
+
+      setPresentationTitle(result.title);
+      loadSlides(result.slides);
+
+      toast.success(`Imported ${result.slides.length} slides!`, { id: toastId });
+    } catch (error) {
+      console.error('Import error:', error);
+      toast.error(error.message || 'Failed to import slides', { id: toastId });
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [setIsGenerating, setPresentationTitle, loadSlides]);
+
+  const handleSaveProject = useCallback(() => {
+    const data = {
+      presentationTitle,
+      slides,
+      theme,
+      version: '1.0'
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${presentationTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('Project saved!');
+  }, [presentationTitle, slides, theme]);
+
+  const handleLoadProject = useCallback((file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (data.slides && Array.isArray(data.slides)) {
+          setPresentationTitle(data.presentationTitle || 'Untitled Presentation');
+          loadSlides(data.slides);
+          toast.success('Project loaded successfully!');
+        } else {
+          throw new Error('Invalid project file');
+        }
+      } catch (error) {
+        console.error('Load error:', error);
+        toast.error('Failed to load project');
+      }
+    };
+    reader.readAsText(file);
+  }, [setPresentationTitle, loadSlides]);
 
   return (
     <div className="app" data-theme={theme}>
@@ -96,6 +154,8 @@ function App() {
         onStartPresentation={startPresentation}
         theme={theme}
         onToggleTheme={toggleTheme}
+        onSaveProject={handleSaveProject}
+        onLoadProject={handleLoadProject}
       />
 
       {/* Main Content */}
@@ -110,6 +170,7 @@ function App() {
           onDuplicateSlide={duplicateSlide}
           onReorderSlides={reorderSlides}
           onGeneratePresentation={handleGeneratePresentation}
+          onImportPresentation={handleImportPresentation}
           isGenerating={isGenerating}
         />
 
